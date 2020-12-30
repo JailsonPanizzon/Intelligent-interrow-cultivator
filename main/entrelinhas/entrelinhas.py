@@ -72,6 +72,9 @@ class RowConfig(Config):
     # Number of validation steps to run at the end of every training epoch.
     VALIDATION_STEPS = 2
 
+    BATCH_SIZE = 10
+
+
 
 ############################################################
 #  Dataset
