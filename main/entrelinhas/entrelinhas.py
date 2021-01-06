@@ -26,8 +26,10 @@ import datetime
 import numpy as np
 import skimage.draw
 import cv2
-from mrcnn.visualize import display_instances
+#from mrcnn.visualize import display_instances
+from mrcnn.visualize import apply_mask
 import matplotlib.pyplot as plt
+import time
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")
@@ -207,10 +209,13 @@ def train(model):
     # COCO trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
     print("Training network")
+    start_time = time.time()
+    print("--- %s seconds ---" % (time.time() - start_time))
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
                 epochs=3,
                 layers='all')
+    print("--- %s seconds ---" % (time.time() - start_time))
 
 
 def color_splash(image, mask):
@@ -270,22 +275,58 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
             success, image = vcapture.read()
             if success:
                 # OpenCV returns images as BGR, convert to RGB
+                normal = image
+                cv2.imshow('normal',image)
+
                 image = image[..., ::-1]
                 # Detect objects
                 r = model.detect([image], verbose=0)[0]
                 # Color splash
+                cv2.imshow('normal',normal)
+
+                img_res = display_instances(normal, r['rois'], r['masks'], r['class_ids'], ["BG", "Entrelinha", "Linha"], r['scores'])
+                cv2.imshow('image',img_res)
                 splash = color_splash(image, r['masks'])
                 # RGB -> BGR to save image to video
                 splash = splash[..., ::-1]
                 # Add image to video writer
                 vwriter.write(splash)
                 count += 1
+            k=cv2.waitKey(30) & 0xff
+            if k == 27:
+                break
         vwriter.release()
     print("Saved to ", file_name)
 
 ############################################################
 #  Training
 ############################################################
+
+def display_instances(image, boxes, masks, ids, names, scores):
+  n_instances = boxes.shape[0]
+  colors = random_colors(n_instances)
+  if not n_instances:
+    print("NO INSTANCES TO DISPLAY")
+  else:
+    assert boxes.shape[0] == masks.shape[-1] == ids.shape[0]
+  for i, color in enumerate(colors):
+    if not np.any(boxes[i]):
+      continue
+    y1, x1, y2, x2 = boxes[i]
+    label = "entrelinha" if names[ids[i]] == "1" else "linha" 
+    score = scores[i] if scores is not None else None
+    caption = '{} {:.2f}'.format(label, score) if score else label
+    mask = masks[:, :, i]
+
+    image = apply_mask(image, mask, color)
+    image = cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+    image = cv2.putText(image, caption, (x1, y1), cv2.FONT_HERSHEY_COMPLEX, 0.7, color, 2)
+  return image
+
+def random_colors(N):
+  np.random.seed(1)
+  colors = [tuple(255 * np.random.rand(3)) for _ in range(N)]
+  return colors
 
 if __name__ == '__main__':
     import argparse
