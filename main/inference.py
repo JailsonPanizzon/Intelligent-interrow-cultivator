@@ -19,7 +19,7 @@ from mrcnn import visualize
 
 sys.path.append(os.path.join(ROOT_DIR, "entrelinhas/"))  # To find local version
 from entrelinhas import entrelinhas
-
+from add_points import add_points
 
 def detect_video(model):
 
@@ -54,7 +54,9 @@ def detect_video(model):
     for i, item in enumerate(zip([frames], results)):
       frame = item[0]
       r = item[1]
-      frame = display_instances(frames, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
+      #frame = display_instances(frames, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
+      print(r['masks'])
+      frame = add_points(frame,r['masks'], r['rois'].shape[0])
       cv2.imshow('image',frame)
       name = '{0}.jpg'.format(cont)
       name = os.path.join(VIDEO_SAVE_DIR, name)
@@ -117,7 +119,7 @@ MODEL_PATH = os.path.join(MODEL_DIR, "mask_rcnn_entrelinhas_0001.h5")
 print(MODEL_PATH)
 if not os.path.exists(MODEL_PATH):
   print("Algo de errado não tá certo")
-elif True:
+elif False:
   config = entrelinhas.RowConfig()
   config.display()
   model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
@@ -135,7 +137,7 @@ elif True:
   class_names = dataset.class_names
   video = os.path.join(os.path.abspath("../"), "main/dataset2/val/GH011564-cut.mp4")
   entrelinhas.detect_and_color_splash(model, video_path=video)
-elif False:
+elif True:
   # Directory of images to run detection on
   IMAGE_DIR = os.path.join(ROOT_DIR, "main/dataset2/val")
   print(IMAGE_DIR)
