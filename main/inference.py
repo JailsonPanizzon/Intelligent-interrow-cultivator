@@ -115,11 +115,12 @@ print(MODEL_DIR)
 
 # Local path to trained weights file
 #COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
-MODEL_PATH = os.path.join(MODEL_DIR, "mask_rcnn_entrelinhas_0001.h5")
+MODEL_PATH = os.path.join(MODEL_DIR, "mask_rcnn_entrelinhas_0019.h5")
 print(MODEL_PATH)
+useVideo = False
 if not os.path.exists(MODEL_PATH):
   print("Algo de errado não tá certo")
-elif False:
+elif not useVideo:
   config = entrelinhas.RowConfig()
   config.display()
   model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
@@ -137,7 +138,7 @@ elif False:
   class_names = dataset.class_names
   video = os.path.join(os.path.abspath("../"), "main/dataset2/val/GH011564-cut.mp4")
   entrelinhas.detect_and_color_splash(model, video_path=video)
-elif True:
+elif useVideo:
   # Directory of images to run detection on
   IMAGE_DIR = os.path.join(ROOT_DIR, "main/dataset2/val")
   print(IMAGE_DIR)
