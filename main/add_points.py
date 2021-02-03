@@ -7,7 +7,7 @@ height_points = 0.8
 aligned_the_row = False
 
 
-def add_points(image,masks, n_instances):
+def add_points(image,masks , n_instances):
     height, width = image.shape[:2]
     points = []
 

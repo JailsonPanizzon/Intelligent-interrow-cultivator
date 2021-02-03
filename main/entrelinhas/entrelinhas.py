@@ -69,7 +69,7 @@ class RowConfig(Config):
     STEPS_PER_EPOCH = 330
 
     # Skip detections with < 90% confidence
-    DETECTION_MIN_CONFIDENCE = 0.9
+    DETECTION_MIN_CONFIDENCE = 0.98
 
     # Number of validation steps to run at the end of every training epoch.
     VALIDATION_STEPS = 2
@@ -129,7 +129,6 @@ class RowDataset(utils.Dataset):
             # shape_attributes (see json format above)
             polygons = [r['shape_attributes'] for r in a['regions']] 
             objects = [s['region_attributes']['name'] for s in a['regions']]
-            print("objects:",objects)
             name_dict = {"1": 1,"2": 2}
             # key = tuple(name_dict)
             num_ids = [name_dict[a] for a in objects]
@@ -138,7 +137,6 @@ class RowDataset(utils.Dataset):
             # load_mask() needs the image size to convert polygons to masks.
             # Unfortunately, VIA doesn't include it in JSON, so we must read
             # the image. This is only managable since the dataset is tiny.
-            print("numids",num_ids)
             image_path = os.path.join(dataset_dir, a['filename'])
             image = skimage.io.imread(image_path)
             height, width = image.shape[:2]
@@ -276,25 +274,25 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
             if success:
                 # OpenCV returns images as BGR, convert to RGB
                 normal = image
-                cv2.imshow('normal',image)
+                # cv2.imshow('normal',image)
 
                 image = image[..., ::-1]
                 # Detect objects
                 r = model.detect([image], verbose=0)[0]
                 # Color splash
-                cv2.imshow('normal',normal)
+                # cv2.imshow('normal',normal)
 
                 img_res = display_instances(normal, r['rois'], r['masks'], r['class_ids'], ["BG", "Entrelinha", "Linha"], r['scores'])
-                cv2.imshow('image',img_res)
+                # cv2.imshow('image',img_res)
                 splash = color_splash(image, r['masks'])
                 # RGB -> BGR to save image to video
                 splash = splash[..., ::-1]
                 # Add image to video writer
                 vwriter.write(splash)
                 count += 1
-            k=cv2.waitKey(30) & 0xff
-            if k == 27:
-                break
+            # k=cv2.waitKey(30) & 0xff
+            # if k == 27:
+                # break
         vwriter.release()
     print("Saved to ", file_name)
 

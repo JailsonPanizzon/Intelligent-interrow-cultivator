@@ -57,15 +57,15 @@ def detect_video(model):
       #frame = display_instances(frames, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
       print(r['masks'])
       frame = add_points(frame,r['masks'], r['rois'].shape[0])
-      cv2.imshow('image',frame)
+      # cv2.imshow('image',frame)
       name = '{0}.jpg'.format(cont)
       name = os.path.join(VIDEO_SAVE_DIR, name)
       cv2.imwrite(name, frame)
       print('writing to file:{0}'.format(name))
       # Clear the frames array to start the next batch
-    k=cv2.waitKey(30) & 0xff
-    if k == 27:
-        break
+    # k=cv2.waitKey(30) & 0xff
+    # if k == 27:
+    #     break
   video.release()
 
 
@@ -117,7 +117,7 @@ print(MODEL_DIR)
 #COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 MODEL_PATH = os.path.join(MODEL_DIR, "mask_rcnn_entrelinhas_0019.h5")
 print(MODEL_PATH)
-useVideo = False
+useVideo = True
 if not os.path.exists(MODEL_PATH):
   print("Algo de errado não tá certo")
 elif not useVideo:
