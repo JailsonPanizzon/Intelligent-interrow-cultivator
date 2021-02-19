@@ -7,6 +7,8 @@ import skimage.io
 import matplotlib
 import cv2
 import matplotlib.pyplot as plt
+import json
+import time
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../")
@@ -115,9 +117,9 @@ print(MODEL_DIR)
 
 # Local path to trained weights file
 #COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
-MODEL_PATH = os.path.join(MODEL_DIR, "mask_rcnn_entrelinhas_0019.h5")
+MODEL_PATH = os.path.join(MODEL_DIR, "mask_rcnn_entrelinhas_0214 (1).h5")
 print(MODEL_PATH)
-useVideo = True
+useVideo = False
 if not os.path.exists(MODEL_PATH):
   print("Algo de errado não tá certo")
 elif not useVideo:
@@ -137,7 +139,19 @@ elif not useVideo:
   # Print class names
   class_names = dataset.class_names
   video = os.path.join(os.path.abspath("../"), "main/dataset2/val/GH011564-cut.mp4")
+  with open("tempo.json", "r") as data:
+    tempo = json.load(data)
+  print("Training network")
+  start_time = time.time()
+  print("--- %s seconds ---" % (time.time() - start_time))
+  print("--- %s seconds armazenados ---" %tempo["tempo"])
   entrelinhas.detect_and_color_splash(model, video_path=video)
+  tempo_atual_interacao =  time.time() - start_time
+  tempo["tempo"] = tempo_atual_interacao + tempo["tempo"]
+  print("--- Tempo desta interação -> %s" %tempo_atual_interacao)
+  print("--- Tempo total -> %s" %tempo["tempo"])
+  with open("tempo.json", "w") as output:
+    json.dump(tempo, output)
 elif useVideo:
   # Directory of images to run detection on
   IMAGE_DIR = os.path.join(ROOT_DIR, "main/dataset2/val")
@@ -164,4 +178,16 @@ elif useVideo:
 
   # Load a random image from the images folder
   file_names = next(os.walk(IMAGE_DIR))[2]
+  with open("tempo.json", "r") as data:
+        tempo = json.load(data)
+  print("Training network")
+  start_time = time.time()
+  print("--- %s seconds ---" % (time.time() - start_time))
+  print("--- %s seconds armazenados ---" %tempo["tempo"])
   detect_video(model)
+  tempo_atual_interacao =  time.time() - start_time
+  tempo["tempo"] = tempo_atual_interacao + tempo["tempo"]
+  print("--- Tempo desta interação -> %s" %tempo_atual_interacao)
+  print("--- Tempo total -> %s" %tempo["tempo"])
+  with open("tempo.json", "w") as output:
+      json.dump(tempo, output)
