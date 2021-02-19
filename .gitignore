@@ -133,3 +133,6 @@ dmypy.json
 *.avi
 *.mp4
 .vscode/settings.json
+
+#NN
+*.h5
