@@ -66,15 +66,21 @@ class RowConfig(Config):
     NUM_CLASSES = 1 + 2  # Background + toy
 
     # Number of training steps per epoch
-    STEPS_PER_EPOCH = 330
+    STEPS_PER_EPOCH = 183
 
     # Skip detections with < 90% confidence
-    DETECTION_MIN_CONFIDENCE = 0.98
+    DETECTION_MIN_CONFIDENCE = 0.9
 
     # Number of validation steps to run at the end of every training epoch.
-    VALIDATION_STEPS = 2
+    VALIDATION_STEPS = 79
 
-    BATCH_SIZE = 10
+    IMAGE_MIN_DIM = 320
+
+    IMAGE_MAX_DIM = 512
+
+    USE_MINI_MASK= False
+
+    EPOCHS = 1
 
 
 
@@ -90,8 +96,8 @@ class RowDataset(utils.Dataset):
         subset: Subset to load: train or val
         """
         # Add classes. We have only one class to add.
-        self.add_class("entrelinha", 1, "1")
-        self.add_class("linha", 2, "2")
+        self.add_class("object", 1, "1")
+        self.add_class("object", 2, "2")
 
 
         # Train or validation dataset?
@@ -206,14 +212,23 @@ def train(model):
     # Since we're using a very small dataset, and starting from
     # COCO trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
+    with open("tempo.json", "r") as data:
+        tempo = json.load(data)
     print("Training network")
     start_time = time.time()
     print("--- %s seconds ---" % (time.time() - start_time))
+    print("--- %s seconds armazenados ---" %tempo["tempo"])
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=3,
+                epochs=20,
                 layers='all')
-    print("--- %s seconds ---" % (time.time() - start_time))
+    tempo_atual_interacao =  time.time() - start_time
+    tempo["tempo"] = tempo_atual_interacao + tempo["tempo"]
+    print("--- Tempo desta interação -> %s" %tempo_atual_interacao)
+    print("--- Tempo total -> %s" %tempo["tempo"])
+    with open("tempo.json", "w") as output:
+        json.dump(tempo, output)
+
 
 
 def color_splash(image, mask):
@@ -235,7 +250,7 @@ def color_splash(image, mask):
     return splash
 
 
-def detect_and_color_splash(model, image_path=None, video_path=None):
+def detect_and_color_splash(model, config, image_path=None, video_path=None):
     assert image_path or video_path
 
     # Image or video?
@@ -254,10 +269,12 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
     elif video_path:
         import cv2
         # Video capture
+        print(video_path)
         vcapture = cv2.VideoCapture(video_path)
         width = int(vcapture.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(vcapture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = vcapture.get(cv2.CAP_PROP_FPS)
+        print(fps)
 
         # Define codec and create video writer
         file_name = "splash_{:%Y%m%dT%H%M%S}.avi".format(datetime.datetime.now())
@@ -267,32 +284,34 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
 
         count = 0
         success = True
+        imgs = []
+        norm = []
         while success:
             print("frame: ", count)
             # Read next image
             success, image = vcapture.read()
-            if success:
-                # OpenCV returns images as BGR, convert to RGB
-                normal = image
-                # cv2.imshow('normal',image)
-
-                image = image[..., ::-1]
-                # Detect objects
-                r = model.detect([image], verbose=0)[0]
-                # Color splash
-                # cv2.imshow('normal',normal)
-
-                img_res = display_instances(normal, r['rois'], r['masks'], r['class_ids'], ["BG", "Entrelinha", "Linha"], r['scores'])
-                # cv2.imshow('image',img_res)
-                splash = color_splash(image, r['masks'])
-                # RGB -> BGR to save image to video
-                splash = splash[..., ::-1]
-                # Add image to video writer
-                vwriter.write(splash)
-                count += 1
-            # k=cv2.waitKey(30) & 0xff
-            # if k == 27:
-                # break
+            count += 1
+            if count % 2 == 0:                
+                if success and len(imgs) < config.IMAGES_PER_GPU:
+                    norm.append(image)
+                    imgs.append(image[..., ::-1]) 
+                else:
+                    # Detect objects
+                    res = model.detect(imgs, verbose=0)
+                    for i, r in enumerate(res):
+                        img_res = display_instances(norm[i], r['rois'], r['masks'], r['class_ids'], ["BG", "Entrelinha", "Linha"], r['scores'])
+                        # cv2.imshow('image',img_res)
+                        splash = color_splash(imgs[i], r['masks'])
+                        # RGB -> BGR to save image to video
+                        splash = splash[..., ::-1]
+                        # Add image to video writer
+                        vwriter.write(splash)
+                        
+                    imgs = []
+                    norm = []
+                # k=cv2.waitKey(30) & 0xff
+                # if k == 27:
+                #     break
         vwriter.release()
     print("Saved to ", file_name)
 
@@ -302,16 +321,18 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
 
 def display_instances(image, boxes, masks, ids, names, scores):
   n_instances = boxes.shape[0]
-  colors = random_colors(n_instances)
   if not n_instances:
     print("NO INSTANCES TO DISPLAY")
   else:
     assert boxes.shape[0] == masks.shape[-1] == ids.shape[0]
-  for i, color in enumerate(colors):
+  for i in range(n_instances):
     if not np.any(boxes[i]):
       continue
     y1, x1, y2, x2 = boxes[i]
-    label = "entrelinha" if names[ids[i]] == "1" else "linha" 
+
+    label = names[ids[i]]
+    color = [50,255,0] if names[ids[i]] == "Entrelinha" else [255,255,255] 
+
     score = scores[i] if scores is not None else None
     caption = '{} {:.2f}'.format(label, score) if score else label
     mask = masks[:, :, i]
@@ -321,10 +342,6 @@ def display_instances(image, boxes, masks, ids, names, scores):
     image = cv2.putText(image, caption, (x1, y1), cv2.FONT_HERSHEY_COMPLEX, 0.7, color, 2)
   return image
 
-def random_colors(N):
-  np.random.seed(1)
-  colors = [tuple(255 * np.random.rand(3)) for _ in range(N)]
-  return colors
 
 if __name__ == '__main__':
     import argparse
@@ -392,7 +409,7 @@ if __name__ == '__main__':
             utils.download_trained_weights(weights_path)
     elif args.weights.lower() == "last":
         # Find last trained weights
-        weights_path = model.find_last()[1]
+        weights_path = model.find_last()
     elif args.weights.lower() == "imagenet":
         # Start from ImageNet trained weights
         weights_path = model.get_imagenet_weights()

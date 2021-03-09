@@ -43,6 +43,7 @@ def detect_video(model):
   frame_count = 0
   print(model.config.BATCH_SIZE)
   cont = 0 
+  points_add = None
   while True:
     ret, frames = video.read() 
     if not ret:
@@ -56,10 +57,10 @@ def detect_video(model):
     for i, item in enumerate(zip([frames], results)):
       frame = item[0]
       r = item[1]
-      #frame = display_instances(frames, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
-      print(r['masks'])
-      frame = add_points(frame,r['masks'], r['rois'].shape[0])
-      # cv2.imshow('image',frame)
+      # frame = display_instances(frames, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
+      
+      frame, points_add = add_points(frame,r['masks'], r['rois'].shape[0],r['class_ids'], anteriores =  points_add)
+      #cv2.imshow('image',frame)
       name = '{0}.jpg'.format(cont)
       name = os.path.join(VIDEO_SAVE_DIR, name)
       cv2.imwrite(name, frame)
@@ -119,7 +120,7 @@ print(MODEL_DIR)
 #COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 MODEL_PATH = os.path.join(MODEL_DIR, "mask_rcnn_entrelinhas_0214 (1).h5")
 print(MODEL_PATH)
-useVideo = False
+useVideo = True
 if not os.path.exists(MODEL_PATH):
   print("Algo de errado não tá certo")
 elif not useVideo:
@@ -139,16 +140,14 @@ elif not useVideo:
   # Print class names
   class_names = dataset.class_names
   video = os.path.join(os.path.abspath("../"), "main/dataset2/val/GH011564-cut.mp4")
+  print(video)
   with open("tempo.json", "r") as data:
     tempo = json.load(data)
-  print("Training network")
   start_time = time.time()
-  print("--- %s seconds ---" % (time.time() - start_time))
-  print("--- %s seconds armazenados ---" %tempo["tempo"])
-  entrelinhas.detect_and_color_splash(model, video_path=video)
+  print("--- %s Start Timer ---" % (time.time() - start_time))
+  entrelinhas.detect_and_color_splash(model, config, video_path=video)
   tempo_atual_interacao =  time.time() - start_time
-  tempo["tempo"] = tempo_atual_interacao + tempo["tempo"]
-  print("--- Tempo desta interação -> %s" %tempo_atual_interacao)
+  tempo["tempo"] = tempo_atual_interacao
   print("--- Tempo total -> %s" %tempo["tempo"])
   with open("tempo.json", "w") as output:
     json.dump(tempo, output)
@@ -173,21 +172,17 @@ elif useVideo:
   dataset.prepare()
   
   # Print class names
-  print(dataset.class_names)
   class_names = dataset.class_names
 
   # Load a random image from the images folder
   file_names = next(os.walk(IMAGE_DIR))[2]
   with open("tempo.json", "r") as data:
         tempo = json.load(data)
-  print("Training network")
   start_time = time.time()
-  print("--- %s seconds ---" % (time.time() - start_time))
-  print("--- %s seconds armazenados ---" %tempo["tempo"])
+  print("--- %s Start timer ---" % (time.time() - start_time))
   detect_video(model)
   tempo_atual_interacao =  time.time() - start_time
-  tempo["tempo"] = tempo_atual_interacao + tempo["tempo"]
-  print("--- Tempo desta interação -> %s" %tempo_atual_interacao)
+  tempo["tempo"] = tempo_atual_interacao
   print("--- Tempo total -> %s" %tempo["tempo"])
   with open("tempo.json", "w") as output:
       json.dump(tempo, output)
